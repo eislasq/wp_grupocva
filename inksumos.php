@@ -62,7 +62,7 @@ function ink_add_admin_menu() {
     // Add a submenu to the custom top-level menu:
     //add_submenu_page( $parent_slug, $page_title, $menu_title, $capability, $menu_slug, $function)
     add_submenu_page('inksumos-admin-menu', "Grupos", "Grupos", 'manage_options', 'ink-groups', 'Ink\\Main::groups');
-    add_submenu_page('inksumos-admin-menu', "Abonar Cromas", "Abonar Cromas", 'manage_options', 'ad_points', 'ink_web_add_points_admin');
+    add_submenu_page('inksumos-admin-menu', "Test Import", "Test Import", 'manage_options', 'ink-test-import', 'Ink\\Catalog::test');
 }
 
 /** === Ajax User functions === * */

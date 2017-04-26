@@ -15,8 +15,9 @@ namespace Ink;
 class Main {
 
     const DEFAULT_ENDPOINT = 'http://www.grupocva.com/catalogo_clientes_xml';
+    const DEFAULT_CLIENT_ID = '26813';
 
-    private static $DEFAULT_GROUPS = array('CONSUMIBLES'
+    static $DEFAULT_GROUPS = array('CONSUMIBLES'
         , 'IMPRESORAS'
         , 'MULTIFUNCIONALES'
         , 'SCANNER'
@@ -33,7 +34,7 @@ class Main {
         }
 
         $endpoint = get_option('ink_catalog_endpoint', SELF::DEFAULT_ENDPOINT);
-        $clientid = get_option('ink_client_id', '26813')
+        $clientid = get_option('ink_client_id', self::DEFAULT_CLIENT_ID);
         ?>
         <div class="wrap">
             <h1><?php _e('Configuración de acceso a catalogos') ?></h1>
@@ -86,12 +87,15 @@ class Main {
 //        echo '<pre>#########' . htmlentities($xmlGroups) . '</pre>';
         $xmlGroups = mb_convert_encoding($xmlGroups, 'UTF-8');
         $xml = simplexml_load_string($xmlGroups);
+
 //        var_dump($xml);
         ?>
         <div class="wrap">
             <h1><?php _e('Configuración de grupos a importar') ?></h1>
             <form method="POST">
-
+                <?php if (!$xml): ?>
+                    No se puede obtener la lista de grupos disponibles. <a href="?page=inksumos-admin-menu" >Revisa la configuración</a>
+                <?php endif ?>
 
                 <ul>
                     <?php foreach ($xml->grupo as $grupo) : ?>
