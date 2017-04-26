@@ -13,7 +13,7 @@ define('INK_URL', plugins_url('', __FILE__));
 
 spl_autoload_register(function ($nombre_clase) {
     $ruta_clase = str_replace('\\', '/', $nombre_clase);
-    $pathParts=explode('/', $ruta_clase);
+    $pathParts = explode('/', $ruta_clase);
     $ink = array_shift($pathParts);
     if ('Ink' === $ink) {
         if (file_exists(__DIR__ . "/$ruta_clase.php")) {
@@ -59,9 +59,9 @@ function ink_add_admin_menu() {
     // Add a new top-level menu (ill-advised):
 //        add_menu_page($page_title, $menu_title, $capability, $menu_slug, $function, $icon_url, $position);
     add_menu_page("Inksumos", "Inksumos", 'manage_options', 'inksumos-admin-menu', 'Ink\\Main::config', $icon_url);
-    //add_submenu_page( $parent_slug, $page_title, $menu_title, $capability, $menu_slug, $function)
     // Add a submenu to the custom top-level menu:
-    add_submenu_page('inksumos-admin-menu', "Tarjetas", "Tarjetas", 'manage_options', 'cards', 'ink_print_cards');
+    //add_submenu_page( $parent_slug, $page_title, $menu_title, $capability, $menu_slug, $function)
+    add_submenu_page('inksumos-admin-menu', "Grupos", "Grupos", 'manage_options', 'ink-groups', 'Ink\\Main::groups');
     add_submenu_page('inksumos-admin-menu', "Abonar Cromas", "Abonar Cromas", 'manage_options', 'ad_points', 'ink_web_add_points_admin');
 }
 
