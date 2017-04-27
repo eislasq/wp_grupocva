@@ -33,7 +33,7 @@ class Main {
             update_option('ink_client_id', $clientid);
         }
 
-        $endpoint = get_option('ink_catalog_endpoint', SELF::DEFAULT_ENDPOINT);
+        $endpoint = get_option('ink_catalog_endpoint', self::DEFAULT_ENDPOINT);
         $clientid = get_option('ink_client_id', self::DEFAULT_CLIENT_ID);
         ?>
         <div class="wrap">
@@ -76,7 +76,7 @@ class Main {
         }
 
 
-        $endpoint = get_option('ink_catalog_endpoint', SELF::DEFAULT_ENDPOINT);
+        $endpoint = get_option('ink_catalog_endpoint', self::DEFAULT_ENDPOINT);
         $groups = get_option('ink_catalog_groups', self::$DEFAULT_GROUPS);
 
 //        var_dump($groups);
