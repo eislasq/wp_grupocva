@@ -2,6 +2,16 @@
 
 /*
   Plugin Name: Inksumos
+  Plugin URI:  http://www.inksumos.com.mx/
+  Description: Herramienta para importar productos de Grupo CVA
+  Version:     1.0.0
+  Author:      Eliut Islas
+  Author URI:  https://eliutislas.wordpress.com/
+  License:     Inksumos
+  License URI: http://www.inksumos.com.mx/
+  Text Domain: ink
+  Domain Path: /languages
+
  */
 
 ob_start();
@@ -62,7 +72,7 @@ function ink_add_admin_menu() {
     // Add a submenu to the custom top-level menu:
     //add_submenu_page( $parent_slug, $page_title, $menu_title, $capability, $menu_slug, $function)
     add_submenu_page('inksumos-admin-menu', "Grupos", "Grupos", 'manage_options', 'ink-groups', 'Ink\\Main::groups');
-    add_submenu_page('inksumos-admin-menu', "Test Import", "Test Import", 'manage_options', 'ink-test-import', 'Ink\\Catalog::test');
+    add_submenu_page('inksumos-admin-menu', "Importar", "Importar", 'manage_options', 'ink-import', 'Ink\\Catalog::formImport');
 }
 
 /** === Ajax User functions === * */
