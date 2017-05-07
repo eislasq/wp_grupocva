@@ -15,6 +15,7 @@ namespace Ink;
 class Catalog {
 
     static function import() {
+        set_time_limit(0);
         $groups = get_option('ink_catalog_groups', Main::$DEFAULT_GROUPS);
 
         foreach ($groups as $groupName) {
@@ -75,8 +76,8 @@ class Catalog {
         while ($nodeName != 'item') {
 //            echo "<h1>$nodeName</h1>";
             $reader->read();
-            $item = $reader->readOuterXML();
-            if (empty(trim($item))) {
+            $item = trim($reader->readOuterXML());
+            if (empty($item)) {
                 continue;
             }
             $simpleXMLElement = simplexml_load_string($item);
@@ -89,9 +90,10 @@ class Catalog {
 
         $items = 0;
         while ($item = $reader->readOuterXML()) {
+            $item = trim($item);
 //            echo number_format(memory_get_usage() / 1024 / 1024, 3) . 'MB <br/>';
             $reader->next();
-            if (empty(trim($item))) {
+            if (empty($item)) {
                 continue;
 //                echo 'XD';
             }
@@ -113,10 +115,10 @@ class Catalog {
         $itemObject = simplexml_load_string($item);
 
 //        var_dump($itemObject);
-//        var_dump((string)$itemObject->clave);
+//        var_dump((string)$itemObject->codigo_fabricante);
 
 
-        $productId = wc_get_product_id_by_sku((string) $itemObject->clave);
+        $productId = wc_get_product_id_by_sku((string) $itemObject->codigo_fabricante);
 //        $productId = wc_get_product_id_by_sku('ttttkzd');
 //        var_dump($productId);
 
@@ -146,8 +148,21 @@ class Catalog {
         update_post_meta($productId, '_length', '');
         update_post_meta($productId, '_width', '');
         update_post_meta($productId, '_height', '');
-        update_post_meta($productId, '_sku', (string) $itemObject->clave);
-        update_post_meta($productId, '_product_attributes', array());
+        update_post_meta($productId, '_sku', (string) $itemObject->codigo_fabricante);
+
+
+        $term_taxonomy_ids = wp_set_object_terms($productId, (string) $itemObject->marca, 'pa_marca', true);
+        $attributes = Array(
+            'pa_marca' => Array(
+                'name' => 'pa_marca',
+                'value' => (string) $itemObject->marca,
+                'is_visible' => '1',
+                'is_variation' => '1',
+                'is_taxonomy' => '1'
+            )
+        );
+
+        update_post_meta($productId, '_product_attributes', $attributes);
         update_post_meta($productId, '_sale_price_dates_from', '');
         update_post_meta($productId, '_sale_price_dates_to', '');
         update_post_meta($productId, '_price', (string) $itemObject->precio);
@@ -159,7 +174,8 @@ class Catalog {
     }
 
     static function setProductPhotoFromUrl($postid, $photo_url) {
-        if (empty(trim($photo_url))) {
+        $photo_url = trim($photo_url);
+        if (empty($photo_url)) {
             return false;
         }
         require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -206,14 +222,15 @@ class Catalog {
 //        $rustart = getrusage();
         ?>
         <div class="wrap">
-            <h1><?php _e('Importar Productos') ?></h1>
+            <h1><?php _e('Importar Productos') ?></h1>}
+            <?php // echo '<pre>'; print_r( _get_cron_array() ); echo '</pre>';?>
             <p>
                 Desde aquí puedes importar manualmente los productos. 
             </p>
             <p>
                 Los productos ya existentes se actualizarán con la información del proveedor.
             </p>
-            
+
             <form method="POST" id="form-import">
                 <?php
                 $submit = filter_input(INPUT_POST, 'submit');
@@ -247,5 +264,9 @@ class Catalog {
 //        echo "It spent " . rutime($ru, $rustart, "stime") .
 //        " ms in system calls\n";
     }
+
+//    static function testCron() {
+//        error_log("\n###" . date('Y-m-d H:i:s') . ' testCron', 3, INK_PATH . '/testcron.log');
+//    }
 
 }

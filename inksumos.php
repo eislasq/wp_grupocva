@@ -54,12 +54,38 @@ function hcwp_run_sql($file) {
     }
 }
 
+
+//function isa_add_cron_recurrence_interval( $schedules ) {
+// 
+//    $schedules['every_ten_seconds'] = array(
+//            'interval'  => 10,
+//            'display'   => __( 'Every 10 Seconds', 'textdomain' )
+//    );
+//     
+//    return $schedules;
+//}
+//add_filter( 'cron_schedules', 'isa_add_cron_recurrence_interval' );
+
+#############
+
+
+add_action('ink_daily_import', 'Ink\\Catalog::import');
+//add_action('ink_hourly_test', 'Ink\\Catalog::testCron');
+
 function hcwp_activate() {
+    if (!wp_next_scheduled('ink_daily_import')) {
+        wp_schedule_event(time(), 'daily', 'ink_daily_import');
+    }
+//    if (!wp_next_scheduled('ink_hourly_test')) {
+//        wp_schedule_event(time(), 'every_ten_seconds', 'ink_hourly_test');
+//    }
     hcwp_run_sql(INK_PATH . '/activate.sql');
     /** if (WP_DEBUG) {hcwp_run_sql(INK_PATH . '/test-data.sql');} * */
 }
 
 function hcwp_deactivate() {
+    wp_clear_scheduled_hook('ink_daily_import');
+//    wp_clear_scheduled_hook('ink_hourly_test');
     hcwp_run_sql(INK_PATH . '/deactivate.sql');
 }
 
