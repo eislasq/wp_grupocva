@@ -17,56 +17,70 @@ class Catalog {
     static function import() {
         set_time_limit(0);
         $groups = get_option('ink_catalog_groups', Main::$DEFAULT_GROUPS);
-
+        $importSummary = array();
         foreach ($groups as $groupName) {
-            $termExists = term_exists($groupName, 'product_cat', 0);
+            $categoryId = self::createCategory($groupName);
 
-
-//            var_dump($groupExists);
-            /*
-             * array (size=2)
-             *  'term_id' => string '30' (length=2)
-             *  'term_taxonomy_id' => string '30' (length=2)
-             */
-
-            if (!$termExists) {
-                $termId = wp_insert_term(
-                        $groupName, // the term 
-                        'product_cat', // the taxonomy
-                        array(
-                    'parent' => 0
-                ));
-                $categoryId = $termId['term_id'];
-
-
-//                var_dump($categoryId);
-                /*
-                 *  array (size=2)
-                 *      'term_id' => int 30
-                 *      'term_taxonomy_id' => int 30
-                 */
-            } else {
-                $categoryId = $termExists['term_id'];
-            }
-
-
-
-
-            self::importGroup($groupName, $categoryId);
+            self::importGroup($groupName, $categoryId, $importSummary);
 
 //            exit();
         }
+        ?>
+        <h2>Resumen de articulos importados:</h2>
+        <style>
+            b.number{
+                color: green;
+            }
+        </style>
+        <?php
+        echo '<pre>';
+        echo preg_replace('/": (\d+)/', "\": \t<b class='number'>$1</b>", json_encode($importSummary, JSON_PRETTY_PRINT));
+        echo '</pre>';
     }
 
-    static function importGroup($groupName, $categoryId) {
+    static function createCategory($groupName, $parentId = 0) {
+        $termExists = term_exists($groupName, 'product_cat', $parentId);
+
+
+//            var_dump($groupExists);
+        /*
+         * array (size=2)
+         *  'term_id' => string '30' (length=2)
+         *  'term_taxonomy_id' => string '30' (length=2)
+         */
+
+        if (!$termExists) {
+            $termId = wp_insert_term(
+                    $groupName, // the term 
+                    'product_cat', // the taxonomy
+                    array(
+                'parent' => $parentId
+            ));
+            $categoryId = $termId['term_id'];
+
+
+//                var_dump($categoryId);
+            /*
+             *  array (size=2)
+             *      'term_id' => int 30
+             *      'term_taxonomy_id' => int 30
+             */
+        } else {
+            $categoryId = $termExists['term_id'];
+        }
+        return $categoryId;
+    }
+
+    static function importGroup($groupName, $categoryId, &$importSummary = array()) {
         //http://www.grupocva.com/catalogo_clientes_xml/lista_precios.xml?cliente=26813&marca=HP&grupo=IMPRESORA%20DE%20AMPLIO%20FORMATO%20(PLOTTER)&clave=%&codigo=%        
 
         $endpoint = get_option('ink_catalog_endpoint', Main::DEFAULT_ENDPOINT);
         $clientid = get_option('ink_client_id', Main::DEFAULT_CLIENT_ID);
 
-        echo "<h1>$groupName</h1>";
+//        echo "\n<h1>$groupName</h1>\n";
         $reader = new \XMLReader();
         $queryString = http_build_query(array('cliente' => $clientid
+            , 'subgpo' => 1
             , 'grupo' => $groupName
         ));
 //        echo "$endpoint/lista_precios.xml?$queryString";
@@ -100,22 +114,42 @@ class Catalog {
 //                echo 'XD';
             }
 //            echo "#####<hr/>";
-            self::importItem($item, $groupName);
+            self::importItem($item, $importSummary);
             $items++;
 //            var_dump($item);
 //            var_dump(simplexml_load_string($item));
 //            break;
         }
 
-        echo "<h3>$items items importados</h3><hr/>";
+//        echo "<h3>$items items importados</h3><hr/>\n";
     }
 
-    static function importItem($item, $groupName) {
-
-//        var_dump($item);
+    static function importItem($item, &$importSummary = array()) {
 
         $itemObject = simplexml_load_string($item);
 
+        $groupName = (string) $itemObject->grupo;
+        $subGrupo = (string) $itemObject->subgrupo;
+
+        $importSummary[$groupName ?: '#_Sin grupo_'][$subGrupo ?: '#_Sin subgrupo_'] ++;
+
+
+
+//        var_dump($item, $groupName, $subGrupo);
+        if (empty($subGrupo)) {
+            //no hay subgrupo se asigna al grupo
+//            var_dump("no hay subgrupo se asigna al grupo $groupName");
+        } else {//hay subgrupo
+            $parentId = self::createCategory($groupName); //se crea el padre
+//            var_dump(" se crea la categoria padre $groupName,  $parentId");
+            if ($parentId) {//existe el padre
+                $categoryId = self::createCategory($subGrupo, $parentId); //se crea subcategoria
+//                var_dump(" se crea la Subcategoria $subGrupo,  $categoryId");
+                $groupName = $subGrupo;
+            }
+        }
+
+//        var_dump($item);
 //        var_dump($itemObject);
 //        var_dump((string)$itemObject->codigo_fabricante);
 
@@ -189,6 +223,7 @@ class Catalog {
 
         $reader = new \XMLReader();
         $queryString = http_build_query(array('cliente' => $clientid
+            , 'subgpo' => 1
             , 'codigo' => $sku
         ));
         $reader->open("$endpoint/lista_precios.xml?$queryString");
@@ -210,8 +245,8 @@ class Catalog {
             if (empty($item)) {
                 continue;
             }
-            self::importItem($item, (string) $item->grupo);
-            break;//update just one
+            self::importItem($item);
+            break; //update just one
         }
     }
 
@@ -265,7 +300,7 @@ class Catalog {
         ?>
         <div class="wrap">
             <h1><?php _e('Importar Productos') ?></h1>
-            <?php // echo '<pre>'; print_r( _get_cron_array() ); echo '</pre>';  ?>
+            <?php // echo '<pre>'; print_r( _get_cron_array() ); echo '</pre>';    ?>
             <p>
                 Desde aquí puedes importar manualmente los productos. 
             </p>
