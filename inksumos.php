@@ -54,7 +54,6 @@ function hcwp_run_sql($file) {
     }
 }
 
-
 //function isa_add_cron_recurrence_interval( $schedules ) {
 // 
 //    $schedules['every_ten_seconds'] = array(
@@ -65,11 +64,11 @@ function hcwp_run_sql($file) {
 //    return $schedules;
 //}
 //add_filter( 'cron_schedules', 'isa_add_cron_recurrence_interval' );
-
 #############
 
 
 add_action('ink_daily_import', 'Ink\\Catalog::import');
+
 //add_action('ink_hourly_test', 'Ink\\Catalog::testCron');
 
 function hcwp_activate() {
@@ -111,7 +110,29 @@ add_action('admin_menu', 'ink_add_admin_menu');
 /** Run this functions when the plugins is activated or deactivated * */
 register_activation_hook(__FILE__, 'hcwp_activate');
 register_deactivation_hook(__FILE__, 'hcwp_deactivate');
+
 //To execute shortcode on widgets remove comment from below
 //add_filter('widget_text', 'do_shortcode', 11);
 //[myFunction]
 //add_shortcode( 'myFunction', 'my_funcion1' );
+
+
+function ink_validate_add_cart_item($passed, $product_id, $quantity, $variation_id = '', $variations = '') {
+
+    // do your validation, if not met switch $passed to false
+    Ink\Catalog::updateProduct($product_id);
+    $product = wc_get_product($product_id);
+    $stockAvailable = $product->get_stock_quantity();
+
+    if ($stockAvailable < $quantity) {
+        $passed = false;
+        if ($quantity > 1) {
+            wc_add_notice(__('Disculpa, No hay stock suficiente, intenta añadir solo ' . $stockAvailable, 'ink'), 'error');
+        } else {
+            wc_add_notice(__('Disculpa, se agotó este artículo', 'ink'), 'error');
+        }
+    }
+    return $passed;
+}
+
+add_filter('woocommerce_add_to_cart_validation', 'ink_validate_add_cart_item', 10, 5);

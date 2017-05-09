@@ -52,13 +52,13 @@ class Catalog {
 
 
 
-            self::importGroup($groupName, $categoryId, $groupName);
+            self::importGroup($groupName, $categoryId);
 
 //            exit();
         }
     }
 
-    static function importGroup($groupName, $categoryId, $groupName) {
+    static function importGroup($groupName, $categoryId) {
         //http://www.grupocva.com/catalogo_clientes_xml/lista_precios.xml?cliente=26813&marca=HP&grupo=IMPRESORA%20DE%20AMPLIO%20FORMATO%20(PLOTTER)&clave=%&codigo=%        
 
         $endpoint = get_option('ink_catalog_endpoint', Main::DEFAULT_ENDPOINT);
@@ -69,6 +69,8 @@ class Catalog {
         $queryString = http_build_query(array('cliente' => $clientid
             , 'grupo' => $groupName
         ));
+//        echo "$endpoint/lista_precios.xml?$queryString";
+//        exit();
         $reader->open("$endpoint/lista_precios.xml?$queryString");
 
         $nodeName = '';
@@ -98,7 +100,7 @@ class Catalog {
 //                echo 'XD';
             }
 //            echo "#####<hr/>";
-            self::importItem($item, $categoryId, $groupName);
+            self::importItem($item, $groupName);
             $items++;
 //            var_dump($item);
 //            var_dump(simplexml_load_string($item));
@@ -108,7 +110,7 @@ class Catalog {
         echo "<h3>$items items importados</h3><hr/>";
     }
 
-    static function importItem($item, $categoryId, $groupName) {
+    static function importItem($item, $groupName) {
 
 //        var_dump($item);
 
@@ -136,7 +138,12 @@ class Catalog {
 
 
         update_post_meta($productId, '_visibility', 'visible');
-        update_post_meta($productId, '_stock_status', 'instock');
+
+        $stockStatus = 'outofstock';
+        if (((int) $itemObject->disponible) > 0) {
+            $stockStatus = 'instock';
+        }
+        update_post_meta($productId, '_stock_status', $stockStatus);
         update_post_meta($productId, 'total_sales', '0');
         update_post_meta($productId, '_downloadable', 'no');
         update_post_meta($productId, '_virtual', 'yes');
@@ -150,6 +157,13 @@ class Catalog {
         update_post_meta($productId, '_height', '');
         update_post_meta($productId, '_sku', (string) $itemObject->codigo_fabricante);
 
+        update_post_meta($productId, '_sale_price_dates_from', '');
+        update_post_meta($productId, '_sale_price_dates_to', '');
+        update_post_meta($productId, '_price', (string) $itemObject->precio);
+        update_post_meta($productId, '_sold_individually', '');
+        update_post_meta($productId, '_manage_stock', 'no');
+        update_post_meta($productId, '_backorders', 'no');
+        update_post_meta($productId, '_stock', (string) $itemObject->disponible);
 
         $term_taxonomy_ids = wp_set_object_terms($productId, (string) $itemObject->marca, 'pa_marca', true);
         $attributes = Array(
@@ -161,16 +175,44 @@ class Catalog {
                 'is_taxonomy' => '1'
             )
         );
-
         update_post_meta($productId, '_product_attributes', $attributes);
-        update_post_meta($productId, '_sale_price_dates_from', '');
-        update_post_meta($productId, '_sale_price_dates_to', '');
-        update_post_meta($productId, '_price', (string) $itemObject->precio);
-        update_post_meta($productId, '_sold_individually', '');
-        update_post_meta($productId, '_manage_stock', 'no');
-        update_post_meta($productId, '_backorders', 'no');
-        update_post_meta($productId, '_stock', (string) $itemObject->disponible);
+
         self::setProductPhotoFromUrl($productId, (string) $itemObject->imagen);
+    }
+
+    static function updateProduct($product_id) {
+        $product = wc_get_product($product_id);
+        $sku = $product->get_sku();
+
+        $endpoint = get_option('ink_catalog_endpoint', Main::DEFAULT_ENDPOINT);
+        $clientid = get_option('ink_client_id', Main::DEFAULT_CLIENT_ID);
+
+        $reader = new \XMLReader();
+        $queryString = http_build_query(array('cliente' => $clientid
+            , 'codigo' => $sku
+        ));
+        $reader->open("$endpoint/lista_precios.xml?$queryString");
+
+        $nodeName = '';
+        while ($nodeName != 'item') {
+            $reader->read();
+            $item = trim($reader->readOuterXML());
+            if (empty($item)) {
+                continue;
+            }
+            $simpleXMLElement = simplexml_load_string($item);
+            $nodeName = $simpleXMLElement->getName();
+        }
+
+        while ($item = $reader->readOuterXML()) {
+            $item = trim($item);
+            $reader->next();
+            if (empty($item)) {
+                continue;
+            }
+            self::importItem($item, (string) $item->grupo);
+            break;//update just one
+        }
     }
 
     static function setProductPhotoFromUrl($postid, $photo_url) {
@@ -222,8 +264,8 @@ class Catalog {
 //        $rustart = getrusage();
         ?>
         <div class="wrap">
-            <h1><?php _e('Importar Productos') ?></h1>}
-            <?php // echo '<pre>'; print_r( _get_cron_array() ); echo '</pre>';?>
+            <h1><?php _e('Importar Productos') ?></h1>
+            <?php // echo '<pre>'; print_r( _get_cron_array() ); echo '</pre>';  ?>
             <p>
                 Desde aquí puedes importar manualmente los productos. 
             </p>
@@ -268,5 +310,4 @@ class Catalog {
 //    static function testCron() {
 //        error_log("\n###" . date('Y-m-d H:i:s') . ' testCron', 3, INK_PATH . '/testcron.log');
 //    }
-
 }
